@@ -26,9 +26,12 @@ class SectionController {
 
     this.applyOverlayPresentation();
 
-    // Load video source lazily
+    // Load video source lazily and derive an optional numeric index from the filename (videoN.*)
     const src = section.dataset.videoSrc;
+    this.videoIndex = null;
     if (src) {
+      const m = /video(\d+)\.(mp4|webm|ogg|ogv)$/i.exec(src);
+      if (m) this.videoIndex = parseInt(m[1], 10);
       const source = document.createElement('source');
       source.src = src;
       source.type = guessTypeFromSrc(src);
@@ -88,6 +91,24 @@ class SectionController {
     this.section.dataset.card = String(val);
     // Ensure wrapper exists and just toggle surface
     this.applyOverlayPresentation();
+  }
+
+  setVideoIndex(n) {
+    const idx = parseInt(n, 10);
+    if (!Number.isFinite(idx) || idx < 1) return;
+    const newSrc = `assets/videos/video${idx}.mp4`;
+    // Update dataset and internal state
+    this.section.dataset.videoSrc = newSrc;
+    this.videoIndex = idx;
+    // Replace <source> children and reload
+    this.video.pause();
+    this.video.removeAttribute('src');
+    this.video.querySelectorAll('source').forEach(s => s.remove());
+    const source = document.createElement('source');
+    source.src = newSrc;
+    source.type = guessTypeFromSrc(newSrc);
+    this.video.appendChild(source);
+    this.video.load();
   }
 
   computeProgress(scrollY, viewportH) {
@@ -173,6 +194,7 @@ function init() {
     scrubFullPass: document.getElementById('scrubFullPass'),
     maskSelect: document.getElementById('maskSelect'),
     themeSelect: document.getElementById('themeSelect'),
+    videoIndex: document.getElementById('videoIndex'),
     gradient: document.getElementById('gradientOverlay'),
     // maskSelect/mediaToggle removed
   };
@@ -246,6 +268,7 @@ function init() {
     if (cardTog) cardTog.checked = !!sc.useCard;
     if (controls.maskSelect) controls.maskSelect.value = sc.section.dataset.mask || '';
     if (controls.themeSelect) controls.themeSelect.value = sc.section.dataset.theme || 'dark';
+    if (controls.videoIndex) controls.videoIndex.value = sc.videoIndex || '';
   }
 
   const alignSel = document.getElementById('alignSelect');
@@ -276,6 +299,22 @@ function init() {
       if (sc) {
         const val = controls.themeSelect.value || 'dark';
         sc.section.dataset.theme = val;
+      }
+    });
+  }
+
+  if (controls.videoIndex) {
+    controls.videoIndex.addEventListener('change', () => {
+      const sc = sections[activeIndex];
+      if (!sc) return;
+      const val = parseInt(controls.videoIndex.value, 10);
+      if (Number.isFinite(val) && val >= 1) {
+        sc.setVideoIndex(val);
+        // Resume playback if not scrubbing and section is visible
+        const scrubbing = controls.scrub && controls.scrub.checked;
+        if (!scrubbing && sc.isVisible) {
+          sc.video.play().catch(() => {/* ignore autoplay block */});
+        }
       }
     });
   }

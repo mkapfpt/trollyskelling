@@ -38,6 +38,10 @@
       <label for="cardToggle">Show Card (active section)</label>
       <input id="cardToggle" type="checkbox" checked />
     </div>
+    <div class="control inline">
+      <label for="videoIndex">Video (active section)</label>
+      <input id="videoIndex" type="number" min="1" max="12" step="1" />
+    </div>
     <div class="control">
       <label for="maskSelect">Mask (active section)</label>
       <select id="maskSelect">
@@ -65,7 +69,7 @@
       <h1> and <p> elements. You can add more <p> or <h2> etc. as needed.
     -->
     <!-- Section 1 -->
-    <section class="panel" data-text-speed="0.5" data-video-speed="0.15" data-duration="10" data-title="Arrival" data-theme="dark" data-video-src="assets/videos/video1.mp4" data-mask="diag-down" data-card="true">
+    <section class="panel" data-text-speed="0.5" data-video-speed="0.15" data-duration="10" data-title="Arrival" data-theme="light" data-video-src="assets/videos/video1.mp4" data-mask="taper-right" data-card="true" data-align="right">
       <div class="sticky">
         <video class="bg-video" playsinline muted preload="metadata" poster="assets/images/placeholder1.jpg"></video>
         <div class="overlay">
@@ -80,14 +84,14 @@
     </section>
 
     <!-- Section 2 -->
-    <section class="panel" data-text-speed="0.25" data-video-speed="-0.1" data-duration="12" data-title="Ascent" data-theme="light" data-video-src="assets/videos/video2.mp4" data-mask="curve-top" data-card="true" data-align="right">
+    <section class="panel" data-text-speed="0.25" data-video-speed="-0.1" data-duration="12" data-title="Ascent" data-theme="dark" data-video-src="assets/videos/video2.mp4" data-mask="taper-left" data-card="true" data-align="left">
       <div class="sticky">
         <video class="bg-video" playsinline muted preload="metadata" poster="assets/images/placeholder2.jpg"></video>
         <div class="overlay">
           <!-- BEGIN EDITABLE CONTENT (Section 2) -->
-          <h1>Ascent</h1>
+          <h1>Malware</h1>
           <p>
-            Malware, short for malicious software, is a significant threat to our digital security. This type of software is designed to disrupt computer operations, gather sensitive information, or gain unauthorized access to computer systems. 
+            Malware, short for malicious software, is designed to disrupt computer operations, gather sensitive information, or gain unauthorized access to systems. 
           </p>
           <p>
             Common forms include viruses, which attach to legitimate files; worms, which spread independently across networks; and ransomware, which encrypts files and demands payment for their release. Staying safe means being cautious about downloading unfamiliar files, and avoiding suspicious links.
@@ -98,20 +102,14 @@
     </section>
 
     <!-- Section 3 -->
-    <section class="panel" data-text-speed="0.6" data-video-speed="0.0" data-duration="8" data-title="Summit" data-theme="dark" data-video-src="assets/videos/video3.mp4" data-mask="diag-up" data-align="left" data-card="true">
+    <section class="panel" data-text-speed="0.6" data-video-speed="0.0" data-duration="8" data-title="Summit" data-theme="dark" data-video-src="assets/videos/video3.mp4" data-mask="taper-right" data-align="right" data-card="true">
       <div class="sticky">
         <video class="bg-video" playsinline muted preload="metadata" poster="assets/images/placeholder3.jpg"></video>
         <div class="overlay">
           <!-- BEGIN EDITABLE CONTENT (Section 3) -->
-          <h1>Summit</h1>
+          <h1>Evolution</h1>
           <p>
-            Placeholder copy for Section 3. This is a good place to conclude
-            or reveal an insight. The video parallax here is set to 0 by
-            default, pinning the background.
-          </p>
-          <p>
-            To change text, open <code>index.html</code> and edit the content
-            between the BEGIN/END EDITABLE CONTENT comments for this section.
+            New attack vectors and techniques emerge all the time, making older safeguards obsolete. Cybercriminals discover new vulnerabilities and new ways to exploit them. This means our defense strategies can't stay static.  Threats are constantly evolving, and our understanding and readiness must also evolve to keep pace.
           </p>
           <!-- END EDITABLE CONTENT (Section 3) -->
         </div>
@@ -119,6 +117,6 @@
     </section>
   </main>
 
-  <script type="module" src="scripts/app.js"></script>
+  <script src="scripts/app.js"></script>
 </body>
 </html>
