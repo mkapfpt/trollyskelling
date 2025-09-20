@@ -1,0 +1,25 @@
+{
+  "sections": [
+    {
+      "title": "Arrival",
+      "video": "assets/videos/video1.mp4",
+      "textSpeed": 0.5,
+      "videoSpeed": 0.15,
+      "duration": 10
+    },
+    {
+      "title": "Ascent",
+      "video": "assets/videos/video2.mp4",
+      "textSpeed": 0.25,
+      "videoSpeed": -0.1,
+      "duration": 12
+    },
+    {
+      "title": "Summit",
+      "video": "assets/videos/video3.mp4",
+      "textSpeed": 0.6,
+      "videoSpeed": 0.0,
+      "duration": 8
+    }
+  ]
+}

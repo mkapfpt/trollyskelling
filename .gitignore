@@ -1,0 +1,46 @@
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editor/IDE settings
+.vscode/
+.idea/
+*.code-workspace
+
+# Logs and temp artifacts
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.tmp
+*.temp
+~$*
+
+# Build/preview outputs (add if you create them later)
+dist/
+build/
+.out/
+.cache/
+.tmp/
+
+# Node (not used today, but safe if added later)
+node_modules/
+
+# Mac zip artifacts
+__MACOSX/
+
+# Images cache/thumbnails
+*.thumb.jpg
+*.thumb.png
+
+# Generated maps
+*.map
+
+# Python quick server artifacts
+.pytest_cache/
+__pycache__/
+
+# VS Code Live Server session data
+*.history/

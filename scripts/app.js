@@ -1,0 +1,359 @@
+// Scrollytelling Lab - Scroll Controller
+
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+function formatNumber(n) { return (Math.round(n * 100) / 100).toFixed(2); }
+
+class SectionController {
+  constructor(section, defaults) {
+    this.section = section;
+    this.sticky = section.querySelector('.sticky');
+    this.video = section.querySelector('video.bg-video');
+    this.overlay = section.querySelector('.overlay');
+
+    // From dataset or defaults
+    this.textSpeed = parseFloat(section.dataset.textSpeed ?? defaults.textSpeed);
+    this.videoSpeed = parseFloat(section.dataset.videoSpeed ?? defaults.videoSpeed);
+    this.durationHint = parseFloat(section.dataset.duration ?? 10);
+    this.title = section.dataset.title ?? '';
+    this.mask = section.dataset.mask ?? '';
+
+    // Optional presentation controls
+    this.align = (section.dataset.align || 'center').toLowerCase(); // left|center|right
+    this.useCard = String(section.dataset.card || 'true').toLowerCase() === 'true';
+    this.cardBg = section.dataset.cardBg || '';
+    this.cardRadius = section.dataset.cardRadius || '';
+
+    this.applyOverlayPresentation();
+
+    // Load video source lazily
+    const src = section.dataset.videoSrc;
+    if (src) {
+      const source = document.createElement('source');
+      source.src = src;
+      source.type = guessTypeFromSrc(src);
+      this.video.appendChild(source);
+      this.video.load();
+    }
+
+    this.progress = 0; // 0..1 within sticky/pinned span
+    this.fullPass = 0; // 0..1 from first entry to full exit
+    this._lastScrubTs = 0;
+  }
+
+  setMask(mask) {
+    const val = (mask || '').toString();
+    if (val) {
+      this.section.dataset.mask = val;
+    } else {
+      delete this.section.dataset.mask;
+    }
+  }
+
+  applyOverlayPresentation() {
+    // Alignment classes on overlay
+    this.overlay.classList.remove('align-left', 'align-center', 'align-right');
+    const alignClass = `align-${['left','center','right'].includes(this.align) ? this.align : 'center'}`;
+    this.overlay.classList.add(alignClass);
+
+    // Ensure there is always a single card wrapper so width/alignment stay consistent
+    let card = this.overlay.querySelector(':scope > .card');
+    if (!card) {
+      card = document.createElement('div');
+      card.className = 'card';
+      // Move existing child nodes into card
+      while (this.overlay.firstChild) {
+        card.appendChild(this.overlay.firstChild);
+      }
+      this.overlay.appendChild(card);
+    }
+    // Apply per-section variables
+    if (this.cardBg) card.style.setProperty('--card-bg', this.cardBg);
+    if (this.cardRadius) card.style.setProperty('--card-radius', this.cardRadius);
+    // Toggle visual surface without removing the container
+    card.classList.toggle('no-surface', !this.useCard);
+  }
+
+  setAlign(align) {
+    const val = String(align || '').toLowerCase();
+    if (!['left','center','right'].includes(val)) return;
+    this.align = val;
+    this.section.dataset.align = val;
+    this.applyOverlayPresentation();
+  }
+
+  setCard(useCard) {
+    const val = !!useCard;
+    this.useCard = val;
+    this.section.dataset.card = String(val);
+    // Ensure wrapper exists and just toggle surface
+    this.applyOverlayPresentation();
+  }
+
+  computeProgress(scrollY, viewportH) {
+    const start = this.section.offsetTop;
+    const height = this.section.offsetHeight;
+    // Pinned progress (current behavior)
+    const pinnedSpan = height - viewportH;
+    const rawPinned = pinnedSpan > 0 ? (scrollY - start) / pinnedSpan : 0;
+    this.progress = clamp01(rawPinned);
+
+    // Full-pass progress (starts when section bottom touches viewport bottom)
+    const fullStart = start - viewportH;
+    const fullSpan = height + viewportH;
+    const rawFull = fullSpan > 0 ? (scrollY - fullStart) / fullSpan : 0;
+    this.fullPass = clamp01(rawFull);
+
+    return this.progress;
+  }
+
+  applyParallax(globalTextSpeed, globalVideoSpeed, scrubVideo, enableCrossfade, useFullPass) {
+    const p = this.progress;
+    const pTime = useFullPass ? this.fullPass : this.progress;
+
+    // Text parallax: translateY relative to viewport
+    const textRate = this.textSpeed * globalTextSpeed;
+    const textTranslate = (p * -1) * textRate * 300; // px
+    this.overlay.style.transform = `translate3d(0, ${textTranslate.toFixed(2)}px, 0)`;
+
+    // Video parallax: subtle translate for depth
+    const vidRate = this.videoSpeed * globalVideoSpeed;
+    const videoTranslate = p * vidRate * 120; // px
+    this.video.style.transform = `translate3d(0, ${videoTranslate.toFixed(2)}px, 0)`;
+
+    // Optional: scroll-scrub video playback (throttled)
+    if (scrubVideo && this.video.readyState >= 1) {
+      const now = performance.now();
+      const throttleMs = 80; // reduce main-thread pressure
+      if (now - this._lastScrubTs >= throttleMs) {
+        const dur = this.video.duration && Number.isFinite(this.video.duration)
+          ? this.video.duration
+          : this.durationHint;
+        this.video.currentTime = pTime * dur;
+        this._lastScrubTs = now;
+      }
+    }
+
+    // Crossfade opacity near section edges (optional)
+    if (enableCrossfade) {
+      // Fade in over the first 15% and fade out over the last 15% of progress.
+      const fadeInStart = 0.0, fadeInEnd = 0.15;
+      const fadeOutStart = 0.85, fadeOutEnd = 1.0;
+      const fadeIn = smoothstep(fadeInStart, fadeInEnd, p);
+      const fadeOut = 1 - smoothstep(fadeOutStart, fadeOutEnd, p);
+      const opacity = Math.max(0, Math.min(1, fadeIn * fadeOut));
+      this.video.style.opacity = opacity.toFixed(3);
+    } else {
+      // Keep fully opaque to avoid heavy full-screen opacity animation
+      this.video.style.opacity = '1';
+    }
+  }
+}
+
+function guessTypeFromSrc(src) {
+  const ext = src.split('.').pop().toLowerCase();
+  switch (ext) {
+    case 'mp4': return 'video/mp4';
+    case 'webm': return 'video/webm';
+    case 'ogg':
+    case 'ogv': return 'video/ogg';
+    default: return 'video/mp4';
+  }
+}
+
+function smoothstep(edge0, edge1, x) {
+  const t = clamp01((x - edge0) / (edge1 - edge0));
+  return t * t * (3 - 2 * t);
+}
+
+function init() {
+  const controls = {
+    scrub: document.getElementById('scrubVideo'),
+    crossfade: document.getElementById('crossfade'),
+    scrubFullPass: document.getElementById('scrubFullPass'),
+    maskSelect: document.getElementById('maskSelect'),
+    themeSelect: document.getElementById('themeSelect'),
+    gradient: document.getElementById('gradientOverlay'),
+    // maskSelect/mediaToggle removed
+  };
+
+  const defaults = {
+    // Defaults used only if a section omits data-text-speed / data-video-speed
+    textSpeed: 0.4,
+    videoSpeed: 0.15,
+  };
+
+  const sections = Array.from(document.querySelectorAll('section.panel'))
+    .map(sec => new SectionController(sec, defaults));
+
+  // Initialize looping policy based on scrubbing: no loop while scrubbing; loop when not scrubbing
+  sections.forEach(sc => { sc.video.loop = !controls.scrub.checked; });
+
+  // (safety pass for media toggle removed in this revert)
+
+  // Track visibility and manage autoplay vs scrub policy
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const sc = sections.find(s => s.section === entry.target);
+      if (!sc) return;
+      sc.isVisible = !!entry.isIntersecting;
+      if (sc.isVisible) {
+        const scrubbing = controls.scrub && controls.scrub.checked;
+        if (scrubbing) {
+          // Ensure native playback is stopped to avoid fighting with scrubbing
+          sc.video.pause();
+          // Snap immediately to the current scroll-derived frame (no throttle)
+          const dur = sc.video.duration && Number.isFinite(sc.video.duration)
+            ? sc.video.duration
+            : sc.durationHint;
+          const pTime = (controls.scrubFullPass && controls.scrubFullPass.checked) ? sc.fullPass : sc.progress;
+          sc.video.currentTime = pTime * dur;
+        } else {
+          sc.video.play().catch(() => {/* autoplay may be blocked */});
+        }
+      } else {
+        sc.video.pause();
+      }
+    });
+  }, { rootMargin: '0px', threshold: 0.01 });
+
+  sections.forEach(sc => io.observe(sc.section));
+
+  // Track active section index (closest to viewport center)
+  let activeIndex = 0;
+
+  function pickActiveIndex() {
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    const vh = window.innerHeight;
+    const centerY = vh / 2;
+    sections.forEach((sc, i) => {
+      const rect = sc.section.getBoundingClientRect();
+      const secCenter = rect.top + rect.height / 2;
+      const dist = Math.abs(secCenter - centerY);
+      if (dist < bestDist) { bestDist = dist; bestIdx = i; }
+    });
+    return bestIdx;
+  }
+
+  // Controls bindings for active section adjustments
+  function reflectActiveInControls() {
+    const sc = sections[activeIndex];
+    if (!sc) return;
+    const alignSel = document.getElementById('alignSelect');
+    const cardTog = document.getElementById('cardToggle');
+    if (alignSel) alignSel.value = sc.align || 'center';
+    if (cardTog) cardTog.checked = !!sc.useCard;
+    if (controls.maskSelect) controls.maskSelect.value = sc.section.dataset.mask || '';
+    if (controls.themeSelect) controls.themeSelect.value = sc.section.dataset.theme || 'dark';
+  }
+
+  const alignSel = document.getElementById('alignSelect');
+  if (alignSel) {
+    alignSel.addEventListener('change', () => {
+      const sc = sections[activeIndex];
+      if (sc) sc.setAlign(alignSel.value);
+    });
+  }
+  const cardTog = document.getElementById('cardToggle');
+  if (cardTog) {
+    cardTog.addEventListener('change', () => {
+      const sc = sections[activeIndex];
+      if (sc) sc.setCard(cardTog.checked);
+    });
+  }
+
+  if (controls.maskSelect) {
+    controls.maskSelect.addEventListener('change', () => {
+      const sc = sections[activeIndex];
+      if (sc) sc.setMask(controls.maskSelect.value);
+    });
+  }
+
+  if (controls.themeSelect) {
+    controls.themeSelect.addEventListener('change', () => {
+      const sc = sections[activeIndex];
+      if (sc) {
+        const val = controls.themeSelect.value || 'dark';
+        sc.section.dataset.theme = val;
+      }
+    });
+  }
+
+  // Global overlay gradient toggle -> body.has-gradient
+  function applyGradientToggle() {
+    if (!controls.gradient) return;
+    document.body.classList.toggle('has-gradient', !!controls.gradient.checked);
+  }
+  if (controls.gradient) {
+    applyGradientToggle();
+    controls.gradient.addEventListener('change', applyGradientToggle);
+  }
+
+  // Scrub toggle: update loop and playback policy immediately for visible sections
+  if (controls.scrub) {
+    controls.scrub.addEventListener('change', () => {
+      const scrubbing = controls.scrub.checked;
+      sections.forEach(sc => {
+        sc.video.loop = !scrubbing;
+        if (sc.isVisible) {
+          if (scrubbing) {
+            sc.video.pause();
+            const dur = sc.video.duration && Number.isFinite(sc.video.duration)
+              ? sc.video.duration
+              : sc.durationHint;
+            sc.video.currentTime = sc.progress * dur;
+          } else {
+            sc.video.play().catch(() => {});
+          }
+        }
+      });
+    });
+  }
+
+  // (mask/media control listeners removed in this revert)
+
+  // Scroll handler
+  let ticking = false;
+  function onScroll() {
+    if (!ticking) {
+      window.requestAnimationFrame(() => {
+        const y = window.scrollY || window.pageYOffset;
+        const vh = window.innerHeight;
+        // Global multipliers fixed (controls removed)
+        const gsText = 1.0;
+        const gsVideo = 1.0; // Video parallax enabled
+        const scrub = controls.scrub.checked;
+        const fullPass = controls.scrubFullPass ? controls.scrubFullPass.checked : false;
+        const crossfade = controls.crossfade ? controls.crossfade.checked : true;
+
+        sections.forEach(sc => {
+          sc.computeProgress(y, vh);
+          sc.applyParallax(gsText, gsVideo, scrub, crossfade, fullPass);
+        });
+
+        // Parallax sliders removed; no outputs to update
+
+        // Update active section and reflect its state in controls
+        const newActive = pickActiveIndex();
+        if (newActive !== activeIndex) {
+          activeIndex = newActive;
+          reflectActiveInControls();
+        }
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+
+  // Initial paint
+  onScroll();
+  // Initialize controls to current active section
+  activeIndex = pickActiveIndex();
+  reflectActiveInControls();
+}
+
+window.addEventListener('DOMContentLoaded', init);

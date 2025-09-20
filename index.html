@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Scrollytelling Lab</title>
+  <link rel="stylesheet" href="styles/main.css" />
+</head>
+<body>
+  <noscript>
+    <div class="noscript">This demo requires JavaScript enabled to control scroll-driven animations.</div>
+  </noscript>
+
+  <aside id="controls" class="controls" aria-label="Experiment Controls">
+    <h2>Controls</h2>
+    <div class="control inline">
+      <label for="scrubVideo">Scrub Video by Scroll</label>
+      <input id="scrubVideo" type="checkbox" />
+    </div>
+    <div class="control inline">
+      <label for="scrubFullPass">Scrub during entry/exit</label>
+      <input id="scrubFullPass" type="checkbox" checked />
+    </div>
+    <div class="control inline">
+      <label for="crossfade">Enable Crossfade</label>
+      <input id="crossfade" type="checkbox" />
+    </div>
+    <hr />
+    <div class="control">
+      <label for="alignSelect">Text/Card Alignment (active section)</label>
+      <select id="alignSelect">
+        <option value="center">Center</option>
+        <option value="left">Left</option>
+        <option value="right">Right</option>
+      </select>
+    </div>
+    <div class="control inline">
+      <label for="cardToggle">Show Card (active section)</label>
+      <input id="cardToggle" type="checkbox" checked />
+    </div>
+    <div class="control">
+      <label for="maskSelect">Mask (active section)</label>
+      <select id="maskSelect">
+        <option value="">Straight (none)</option>
+        <option value="diag-up">Diagonal Up</option>
+        <option value="diag-down">Diagonal Down</option>
+        <option value="taper-right">Taper Right</option>
+        <option value="taper-left">Taper Left</option>
+      </select>
+    </div>
+    <div class="control">
+      <label for="themeSelect">Theme (active section)</label>
+      <select id="themeSelect">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+    </div>
+  </aside>
+
+  <main>
+    <!--
+      EDITING TEXT:
+      Each section's visible text lives inside its <div class="overlay">.
+      Look for the BEGIN/END EDITABLE CONTENT comments below and edit the
+      <h1> and <p> elements. You can add more <p> or <h2> etc. as needed.
+    -->
+    <!-- Section 1 -->
+    <section class="panel" data-text-speed="0.5" data-video-speed="0.15" data-duration="10" data-title="Arrival" data-theme="dark" data-video-src="assets/videos/video1.mp4" data-mask="diag-down" data-card="true">
+      <div class="sticky">
+        <video class="bg-video" playsinline muted preload="metadata" poster="assets/images/placeholder1.jpg"></video>
+        <div class="overlay">
+          <!-- BEGIN EDITABLE CONTENT (Section 1) -->
+          <h1>AI-Related Hazards
+          <p>
+            As artificial intelligence becomes more integrated into our daily lives, it also introduces new cybersecurity risks. Malicious actors are leveraging AI to automate attacks, making them faster and more sophisticated than ever before. AI can be used to generate highly convincing deepfake videos or to craft personalized phishing emails on a massive scale. These advanced attacks make it harder to distinguish between legitimate and fraudulent digital content, requiring us to be more vigilant about the authenticity of what we see and hear online.
+          </p>
+          <!-- END EDITABLE CONTENT (Section 1) -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2 -->
+    <section class="panel" data-text-speed="0.25" data-video-speed="-0.1" data-duration="12" data-title="Ascent" data-theme="light" data-video-src="assets/videos/video2.mp4" data-mask="curve-top" data-card="true" data-align="right">
+      <div class="sticky">
+        <video class="bg-video" playsinline muted preload="metadata" poster="assets/images/placeholder2.jpg"></video>
+        <div class="overlay">
+          <!-- BEGIN EDITABLE CONTENT (Section 2) -->
+          <h1>Ascent</h1>
+          <p>
+            Malware, short for malicious software, is a significant threat to our digital security. This type of software is designed to disrupt computer operations, gather sensitive information, or gain unauthorized access to computer systems. 
+          </p>
+          <p>
+            Common forms include viruses, which attach to legitimate files; worms, which spread independently across networks; and ransomware, which encrypts files and demands payment for their release. Staying safe means being cautious about downloading unfamiliar files, and avoiding suspicious links.
+          </p>
+          <!-- END EDITABLE CONTENT (Section 2) -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3 -->
+    <section class="panel" data-text-speed="0.6" data-video-speed="0.0" data-duration="8" data-title="Summit" data-theme="dark" data-video-src="assets/videos/video3.mp4" data-mask="diag-up" data-align="left" data-card="true">
+      <div class="sticky">
+        <video class="bg-video" playsinline muted preload="metadata" poster="assets/images/placeholder3.jpg"></video>
+        <div class="overlay">
+          <!-- BEGIN EDITABLE CONTENT (Section 3) -->
+          <h1>Summit</h1>
+          <p>
+            Placeholder copy for Section 3. This is a good place to conclude
+            or reveal an insight. The video parallax here is set to 0 by
+            default, pinning the background.
+          </p>
+          <p>
+            To change text, open <code>index.html</code> and edit the content
+            between the BEGIN/END EDITABLE CONTENT comments for this section.
+          </p>
+          <!-- END EDITABLE CONTENT (Section 3) -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="scripts/app.js"></script>
+</body>
+</html>
