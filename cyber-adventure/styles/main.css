@@ -1,0 +1,72 @@
+/* Cybersecurity Adventure Prototype - Styles */
+:root {
+  --bg: #0b0d10;
+  --fg: #e8edf3;
+  --muted: #91a0ad;
+  --accent: #50e3c2;
+  --danger: #ff6b6b;
+  --panel: #121820;
+  --panel-2: #0f141b;
+  --card: rgba(17, 24, 33, 0.9);
+  --shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: radial-gradient(1200px 600px at 50% -10%, #16202b 0%, #0b0d10 60%) fixed; color: var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+
+.topbar { position: sticky; top: 0; z-index: 20; background: linear-gradient(180deg, rgba(12,18,26,0.9), rgba(12,18,26,0.6)); backdrop-filter: blur(8px); box-shadow: var(--shadow); display: flex; align-items: center; padding: 0.5rem 1rem; gap: 1rem; }
+.topbar h1 { font-size: 1.1rem; margin: 0; color: #dfe8f2; letter-spacing: 0.02em; }
+.nav { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; }
+.nav button { background: #1b2430; color: var(--fg); border: 1px solid rgba(255,255,255,0.1); padding: 0.35rem 0.6rem; border-radius: 8px; cursor: pointer; }
+.nav button:hover { background: #223041; }
+.toggle { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; color: var(--muted); }
+.toggle input { accent-color: var(--accent); }
+
+.inventory { position: fixed; left: 0.75rem; top: 3.5rem; z-index: 25; display: grid; grid-template-columns: repeat(4, 48px); gap: 0.5rem; padding: 0.5rem; background: rgba(20,26,33,0.55); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; backdrop-filter: blur(8px); }
+.inventory .slot { width: 48px; height: 48px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,0.04); border: 1px dashed rgba(255,255,255,0.15); color: var(--muted); font-size: 0.7rem; }
+.inventory .slot.filled { border-style: solid; border-color: rgba(80,227,194,0.6); background: rgba(80,227,194,0.08); color: var(--fg); }
+
+.game-root { position: relative; height: calc(100vh - 52px); overflow: hidden; border-top: 1px solid rgba(255,255,255,0.06); }
+.world { position: relative; height: 100%; width: 4000px; /* area-specific; updated via JS */ }
+.parallax { position: absolute; inset: 0; background: linear-gradient(90deg, #0e141c, #0b0d10 20%, #0f151d 40%, #0b0d10 60%, #0e141c 80%, #0b0d10 100%); }
+
+/* Optional layered background stripes to hint motion */
+.parallax::before, .parallax::after {
+  content: ""; position: absolute; inset: 0;
+  pointer-events: none;
+}
+.parallax::before {
+  background-image: repeating-linear-gradient(90deg, rgba(80,227,194,0.03) 0 2px, transparent 2px 80px);
+}
+.parallax::after {
+  background: radial-gradient(800px 200px at 30% 20%, rgba(80,227,194,0.14), transparent 60%),
+              radial-gradient(700px 240px at 70% 80%, rgba(0,150,255,0.12), transparent 60%);
+  mix-blend-mode: screen;
+}
+
+/* Player */
+.player { position: absolute; left: 100px; bottom: 24px; width: 44px; height: 72px; border-radius: 10px; background: linear-gradient(180deg, #50e3c2, #00bfa5); box-shadow: 0 8px 20px rgba(0,0,0,0.35), inset 0 -10px 16px rgba(0,0,0,0.25); transform: translateZ(0); }
+.player::after { content: ""; position: absolute; left: 6px; right: 6px; top: 8px; height: 10px; border-radius: 6px; background: rgba(0,0,0,0.3); }
+
+/* Hotspots */
+.hotspots { position: absolute; inset: 0; }
+.hotspot { position: absolute; width: 72px; height: 72px; border-radius: 12px; background: rgba(200,220,255,0.06); border: 1px solid rgba(255,255,255,0.08); display: grid; place-items: center; color: #cfe6ff; user-select: none; cursor: pointer; transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, border-color 120ms ease; }
+.hotspot .label { font-size: 0.75rem; line-height: 1; text-align: center; padding: 0.25rem 0.4rem; }
+.hotspot .hint { position: absolute; bottom: calc(100% + 8px); white-space: nowrap; padding: 0.2rem 0.4rem; border-radius: 6px; background: rgba(10,14,18,0.8); font-size: 0.7rem; color: var(--fg); border: 1px solid rgba(255,255,255,0.08); opacity: 0; transform: translateY(4px); transition: 150ms ease; pointer-events: none; }
+.hotspot.near { background: rgba(80,227,194,0.12); border-color: rgba(80,227,194,0.5); box-shadow: 0 0 0 2px rgba(80,227,194,0.25); transform: translateZ(0) scale(1.03); }
+.hotspot.near .hint { opacity: 1; transform: translateY(0); }
+.hotspot.locked { background: rgba(255,107,107,0.08); border-color: rgba(255,107,107,0.4); }
+
+/* Modal */
+.modal { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 40; }
+.modal.hidden { display: none; }
+.modal__surface { width: min(720px, calc(100% - 2rem)); max-height: min(540px, calc(100% - 4rem)); overflow: auto; background: var(--card); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; box-shadow: var(--shadow); }
+.modal__header { display: flex; align-items: center; justify-content: space-between; padding: 0.8rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.modal__body { padding: 1rem; color: var(--fg); line-height: 1.6; }
+.modal__footer { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0.8rem 1rem; border-top: 1px solid rgba(255,255,255,0.08); }
+.icon { background: transparent; border: none; color: var(--fg); font-size: 1.1rem; cursor: pointer; }
+button.primary { background: var(--accent); color: #042019; border: none; padding: 0.5rem 0.8rem; border-radius: 10px; cursor: pointer; font-weight: 600; }
+
+/* Accessibility focus */
+button:focus, .hotspot:focus { outline: 2px solid var(--accent); outline-offset: 2px; }

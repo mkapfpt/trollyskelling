@@ -106,8 +106,9 @@ body {
   max-width: var(--overlay-max);
 }
 .overlay .card.no-surface {
-  background: transparent;
+  background: transparent !important; /* override theme card bg */
   box-shadow: none;
+  color: inherit !important; /* let text elements use their own theme color */
 }
 .overlay.align-center .card { margin: 0 auto; }
 

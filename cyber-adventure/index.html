@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cybersecurity Adventure (Prototype)</title>
+  <link rel="stylesheet" href="styles/main.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Cybersecurity Adventure</h1>
+    <nav class="nav">
+      <button id="btnAreaPrev" title="Previous Area">◀</button>
+      <span id="areaName">Area</span>
+      <button id="btnAreaNext" title="Next Area">▶</button>
+      <label class="toggle">
+        <input id="mouseFollow" type="checkbox" />
+        <span>Mouse Follow</span>
+      </label>
+    </nav>
+  </header>
+
+  <aside id="inventory" class="inventory" aria-label="Inventory"></aside>
+
+  <main id="gameRoot" class="game-root">
+    <div id="world" class="world">
+      <div id="parallax" class="parallax" aria-hidden="true"></div>
+      <div id="hotspots" class="hotspots"></div>
+      <div id="player" class="player" role="img" aria-label="Player"></div>
+    </div>
+  </main>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal__surface">
+      <header class="modal__header">
+        <h2 id="modalTitle"></h2>
+        <button id="modalClose" class="icon" aria-label="Close">✕</button>
+      </header>
+      <div id="modalBody" class="modal__body"></div>
+      <footer class="modal__footer">
+        <button id="modalActionPrimary" class="primary">Action</button>
+        <button id="modalActionSecondary">Close</button>
+      </footer>
+    </div>
+  </div>
+
+  <noscript>
+    <p class="noscript">This prototype requires JavaScript.</p>
+  </noscript>
+
+  <script src="scripts/game.js"></script>
+</body>
+</html>
