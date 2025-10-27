@@ -93,6 +93,24 @@ class SectionController {
     this.applyOverlayPresentation();
   }
 
+  setVideoSource(src) {
+    if (!src || typeof src !== 'string') return;
+    // Update dataset
+    this.section.dataset.videoSrc = src;
+    // Try to derive numeric index (optional)
+    const m = /video(\d+)\.(mp4|webm|ogg|ogv)$/i.exec(src);
+    this.videoIndex = m ? parseInt(m[1], 10) : null;
+    // Replace <source> and reload
+    this.video.pause();
+    this.video.removeAttribute('src');
+    this.video.querySelectorAll('source').forEach(s => s.remove());
+    const source = document.createElement('source');
+    source.src = src;
+    source.type = guessTypeFromSrc(src);
+    this.video.appendChild(source);
+    this.video.load();
+  }
+
   setVideoIndex(n) {
     const idx = parseInt(n, 10);
     if (!Number.isFinite(idx) || idx < 1) return;
@@ -194,10 +212,85 @@ function init() {
     scrubFullPass: document.getElementById('scrubFullPass'),
     maskSelect: document.getElementById('maskSelect'),
     themeSelect: document.getElementById('themeSelect'),
-    videoIndex: document.getElementById('videoIndex'),
+    bgSelect: document.getElementById('bgSelect'),
     gradient: document.getElementById('gradientOverlay'),
     // maskSelect/mediaToggle removed
   };
+
+  // Read asset manifest for backgrounds (standalone-friendly)
+  let assetList = [];
+  const manifestEl = document.getElementById('assetManifest');
+  if (manifestEl && manifestEl.textContent) {
+    try {
+      const data = JSON.parse(manifestEl.textContent);
+      if (Array.isArray(data.assets)) assetList = data.assets;
+    } catch (_) { /* ignore malformed manifest */ }
+  }
+  // Attempt to dynamically list backgrounds from GitHub when hosted
+  async function tryPopulateFromGitHub() {
+    // Only attempt on http(s) and likely GitHub Pages
+    if (!(location.protocol === 'http:' || location.protocol === 'https:')) return false;
+    // Heuristic: user.github.io or custom domain still works if we can infer owner/repo from path
+    function detectRepo() {
+      const host = location.hostname.toLowerCase();
+      const path = location.pathname.replace(/^\/+/, ''); // trim leading /
+      // username.github.io/repo/... => owner=username, repo=first path segment
+      const m = host.match(/^([a-z0-9-]+)\.github\.io$/);
+      if (m) {
+        const owner = m[1];
+        const seg = path.split('/')[0] || '';
+        if (seg) return { owner, repo: seg };
+      }
+      // Fallback: try to read from <meta name="github-repo" content="owner/repo">
+      const meta = document.querySelector('meta[name="github-repo"]');
+      if (meta && meta.content && meta.content.includes('/')) {
+        const [owner, repo] = meta.content.split('/');
+        return { owner, repo };
+      }
+      return null;
+    }
+    const repo = detectRepo();
+    if (!repo) return false;
+    const apiUrl = `https://api.github.com/repos/${repo.owner}/${repo.repo}/contents/assets/videos`;
+    try {
+      const res = await fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github+json' } });
+      if (!res.ok) return false;
+      const items = await res.json();
+      if (!Array.isArray(items)) return false;
+      const vids = items.filter(it => it.type === 'file' && /\.(mp4|webm|ogg|ogv)$/i.test(it.name));
+      if (!vids.length) return false;
+      // Populate dropdown
+      if (controls.bgSelect) {
+        controls.bgSelect.innerHTML = '';
+        vids.forEach(it => {
+          const opt = document.createElement('option');
+          // Use repo-relative path so it serves from the same site origin
+          opt.value = it.path; // e.g., assets/videos/Video1.mp4
+          opt.textContent = it.name.replace(/\.[^.]+$/, '');
+          controls.bgSelect.appendChild(opt);
+        });
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function populateBackgrounds() {
+    const ok = await tryPopulateFromGitHub();
+    if (ok) return;
+    // Fallback to inline manifest
+    if (controls.bgSelect) {
+      controls.bgSelect.innerHTML = '';
+      assetList.forEach((a) => {
+        if (!a || !a.src) return;
+        const opt = document.createElement('option');
+        opt.value = a.src;
+        opt.textContent = a.label || a.src.split('/').pop();
+        controls.bgSelect.appendChild(opt);
+      });
+    }
+  }
 
   const defaults = {
     // Defaults used only if a section omits data-text-speed / data-video-speed
@@ -207,6 +300,12 @@ function init() {
 
   const sections = Array.from(document.querySelectorAll('section.panel'))
     .map(sec => new SectionController(sec, defaults));
+
+  // Populate backgrounds list (async); then reflect active
+  populateBackgrounds().then(() => {
+    // After population, ensure the control reflects current active section
+    reflectActiveInControls();
+  });
 
   // Initialize looping policy based on scrubbing: no loop while scrubbing; loop when not scrubbing
   sections.forEach(sc => { sc.video.loop = !controls.scrub.checked; });
@@ -268,7 +367,17 @@ function init() {
     if (cardTog) cardTog.checked = !!sc.useCard;
     if (controls.maskSelect) controls.maskSelect.value = sc.section.dataset.mask || '';
     if (controls.themeSelect) controls.themeSelect.value = sc.section.dataset.theme || 'dark';
-    if (controls.videoIndex) controls.videoIndex.value = sc.videoIndex || '';
+    if (controls.bgSelect) {
+      const cur = sc.section.dataset.videoSrc || '';
+      // If current src isn’t in the list, add a temporary option for visibility
+      if (cur && !Array.from(controls.bgSelect.options).some(o => o.value === cur)) {
+        const extra = document.createElement('option');
+        extra.value = cur;
+        extra.textContent = cur.split('/').pop();
+        controls.bgSelect.appendChild(extra);
+      }
+      controls.bgSelect.value = cur;
+    }
   }
 
   const alignSel = document.getElementById('alignSelect');
@@ -303,14 +412,13 @@ function init() {
     });
   }
 
-  if (controls.videoIndex) {
-    controls.videoIndex.addEventListener('change', () => {
+  if (controls.bgSelect) {
+    controls.bgSelect.addEventListener('change', () => {
       const sc = sections[activeIndex];
       if (!sc) return;
-      const val = parseInt(controls.videoIndex.value, 10);
-      if (Number.isFinite(val) && val >= 1) {
-        sc.setVideoIndex(val);
-        // Resume playback if not scrubbing and section is visible
+      const val = controls.bgSelect.value;
+      if (val) {
+        sc.setVideoSource(val);
         const scrubbing = controls.scrub && controls.scrub.checked;
         if (!scrubbing && sc.isVisible) {
           sc.video.play().catch(() => {/* ignore autoplay block */});

@@ -13,19 +13,7 @@
 
   <aside id="controls" class="controls" aria-label="Experiment Controls">
     <h2>Controls</h2>
-    <div class="control inline">
-      <label for="scrubVideo">Scrub Video by Scroll</label>
-      <input id="scrubVideo" type="checkbox" />
-    </div>
-    <div class="control inline">
-      <label for="scrubFullPass">Scrub during entry/exit</label>
-      <input id="scrubFullPass" type="checkbox" checked />
-    </div>
-    <div class="control inline">
-      <label for="crossfade">Enable Crossfade</label>
-      <input id="crossfade" type="checkbox" />
-    </div>
-    <hr />
+    
     <div class="control">
       <label for="alignSelect">Text/Card Alignment (active section)</label>
       <select id="alignSelect">
@@ -38,9 +26,9 @@
       <label for="cardToggle">Show Card (active section)</label>
       <input id="cardToggle" type="checkbox" checked />
     </div>
-    <div class="control inline">
-      <label for="videoIndex">Video (active section)</label>
-      <input id="videoIndex" type="number" min="1" max="12" step="1" />
+    <div class="control">
+      <label for="bgSelect">Background (active section)</label>
+      <select id="bgSelect"></select>
     </div>
     <div class="control">
       <label for="maskSelect">Mask (active section)</label>
@@ -59,6 +47,22 @@
         <option value="light">Light</option>
       </select>
     </div>
+
+    <details id="advancedControls">
+      <summary>Advanced</summary>
+      <div class="control inline">
+        <label for="scrubVideo">Scrub Video by Scroll</label>
+        <input id="scrubVideo" type="checkbox" />
+      </div>
+      <div class="control inline">
+        <label for="scrubFullPass">Scrub during entry/exit</label>
+        <input id="scrubFullPass" type="checkbox" checked />
+      </div>
+      <div class="control inline">
+        <label for="crossfade">Enable Crossfade</label>
+        <input id="crossfade" type="checkbox" />
+      </div>
+    </details>
   </aside>
 
   <main>
@@ -116,6 +120,21 @@
       </div>
     </section>
   </main>
+
+  <!-- Inline asset manifest for standalone use. Edit to add/remove assets. -->
+  <script id="assetManifest" type="application/json">
+  {
+    "assets": [
+      { "label": "Video 1", "src": "assets/videos/Video1.mp4", "type": "video" },
+      { "label": "Video 2", "src": "assets/videos/Video2.mp4", "type": "video" },
+      { "label": "Video 3", "src": "assets/videos/Video3.mp4", "type": "video" },
+      { "label": "Video 4", "src": "assets/videos/Video4.mp4", "type": "video" },
+      { "label": "Video 5", "src": "assets/videos/Video5.mp4", "type": "video" },
+      { "label": "Video 6", "src": "assets/videos/Video6.mp4", "type": "video" },
+      { "label": "Video 7", "src": "assets/videos/Video7.mp4", "type": "video" }
+    ]
+  }
+  </script>
 
   <script src="scripts/app.js"></script>
 </body>
