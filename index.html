@@ -15,41 +15,41 @@
     <h2>Controls</h2>
     
     <div class="control">
-      <label for="alignSelect">Text/Card Alignment (active section)</label>
-      <select id="alignSelect">
-        <option value="center">Center</option>
-        <option value="left">Left</option>
-        <option value="right">Right</option>
-      </select>
-    </div>
-    <div class="control inline">
-      <label for="cardToggle">Show Card (active section)</label>
-      <input id="cardToggle" type="checkbox" checked />
-    </div>
-    <div class="control">
-      <label for="bgSelect">Background (active section)</label>
-      <select id="bgSelect"></select>
-    </div>
-    <div class="control">
-      <label for="maskSelect">Mask (active section)</label>
-      <select id="maskSelect">
-        <option value="">Straight (none)</option>
-        <option value="diag-up">Diagonal Up</option>
-        <option value="diag-down">Diagonal Down</option>
-        <option value="taper-right">Taper Right</option>
-        <option value="taper-left">Taper Left</option>
-      </select>
-    </div>
-    <div class="control">
       <label for="themeSelect">Theme (active section)</label>
       <select id="themeSelect">
         <option value="dark">Dark</option>
         <option value="light">Light</option>
       </select>
     </div>
+    <div class="control">
+      <label for="alignSelect">Text alignment (active section)</label>
+      <select id="alignSelect">
+        <option value="center">Center</option>
+        <option value="left">Left</option>
+        <option value="right">Right</option>
+      </select>
+    </div>
+    <div class="control">
+      <label for="bgSelect">Background (active section)</label>
+      <select id="bgSelect"></select>
+    </div>
 
     <details id="advancedControls">
       <summary>Advanced</summary>
+      <div class="control inline">
+        <label for="cardToggle">Show Card (active section)</label>
+        <input id="cardToggle" type="checkbox" checked />
+      </div>
+      <div class="control">
+        <label for="maskSelect">Mask (active section)</label>
+        <select id="maskSelect">
+          <option value="">Straight (none)</option>
+          <option value="diag-up">Diagonal Up</option>
+          <option value="diag-down">Diagonal Down</option>
+          <option value="taper-right">Taper Right</option>
+          <option value="taper-left">Taper Left</option>
+        </select>
+      </div>
       <div class="control inline">
         <label for="scrubVideo">Scrub Video by Scroll</label>
         <input id="scrubVideo" type="checkbox" />
