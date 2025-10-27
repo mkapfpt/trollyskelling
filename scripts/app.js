@@ -26,9 +26,25 @@ class SectionController {
 
     this.applyOverlayPresentation();
 
+    // Create a background <img> for still images (hidden by default)
+    this.bgImg = document.createElement('img');
+    this.bgImg.className = 'bg-image';
+    Object.assign(this.bgImg.style, {
+      position: 'absolute',
+      inset: '0',
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      display: 'none'
+    });
+    // Ensure image sits beneath overlay and alongside video
+    this.sticky.insertBefore(this.bgImg, this.video);
+
     // Load video source lazily and derive an optional numeric index from the filename (videoN.*)
     const src = section.dataset.videoSrc;
     this.videoIndex = null;
+    this.currentBgType = 'video';
+    this.currentBgSrc = src || '';
     if (src) {
       const m = /video(\d+)\.(mp4|webm|ogg|ogv)$/i.exec(src);
       if (m) this.videoIndex = parseInt(m[1], 10);
@@ -91,6 +107,26 @@ class SectionController {
     this.section.dataset.card = String(val);
     // Ensure wrapper exists and just toggle surface
     this.applyOverlayPresentation();
+  }
+
+  setBackground(src, type) {
+    const kind = (type || '').toLowerCase();
+    if (kind === 'image') {
+      // Show image, hide video
+      this.currentBgType = 'image';
+      this.currentBgSrc = src;
+      this.bgImg.src = src;
+      this.bgImg.style.display = '';
+      this.video.pause();
+      this.video.style.display = 'none';
+    } else {
+      // Default to video
+      this.currentBgType = 'video';
+      this.currentBgSrc = src;
+      this.bgImg.style.display = 'none';
+      this.setVideoSource(src);
+      this.video.style.display = '';
+    }
   }
 
   setVideoSource(src) {
@@ -159,9 +195,10 @@ class SectionController {
     const vidRate = this.videoSpeed * globalVideoSpeed;
     const videoTranslate = p * vidRate * 120; // px
     this.video.style.transform = `translate3d(0, ${videoTranslate.toFixed(2)}px, 0)`;
+    this.bgImg.style.transform = `translate3d(0, ${videoTranslate.toFixed(2)}px, 0)`;
 
     // Optional: scroll-scrub video playback (throttled)
-    if (scrubVideo && this.video.readyState >= 1) {
+    if (scrubVideo && this.currentBgType === 'video' && this.video.readyState >= 1) {
       const now = performance.now();
       const throttleMs = 80; // reduce main-thread pressure
       if (now - this._lastScrubTs >= throttleMs) {
@@ -181,10 +218,13 @@ class SectionController {
       const fadeIn = smoothstep(fadeInStart, fadeInEnd, p);
       const fadeOut = 1 - smoothstep(fadeOutStart, fadeOutEnd, p);
       const opacity = Math.max(0, Math.min(1, fadeIn * fadeOut));
-      this.video.style.opacity = opacity.toFixed(3);
+      const op = opacity.toFixed(3);
+      this.video.style.opacity = op;
+      this.bgImg.style.opacity = op;
     } else {
       // Keep fully opaque to avoid heavy full-screen opacity animation
       this.video.style.opacity = '1';
+      this.bgImg.style.opacity = '1';
     }
   }
 }
@@ -226,6 +266,19 @@ function init() {
       if (Array.isArray(data.assets)) assetList = data.assets;
     } catch (_) { /* ignore malformed manifest */ }
   }
+  // Helpers for labels and type detection
+  function extOf(path) { return (path.split('.').pop() || '').toLowerCase(); }
+  function kindFromPath(path) {
+    const e = extOf(path);
+    if (/(mp4|webm|ogg|ogv)$/.test(e)) return 'video';
+    if (/(jpg|jpeg|png|gif|webp|avif|bmp|svg)$/.test(e)) return 'image';
+    return 'file';
+  }
+  function friendlyLabel(name, prefix) {
+    const base = name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
+    return prefix ? `(${prefix}) ${base}` : base;
+  }
+
   // Attempt to dynamically list backgrounds from GitHub when hosted
   async function tryPopulateFromGitHub() {
     // Only attempt on http(s) and likely GitHub Pages
@@ -251,29 +304,31 @@ function init() {
     }
     const repo = detectRepo();
     if (!repo) return false;
-    const apiUrl = `https://api.github.com/repos/${repo.owner}/${repo.repo}/contents/assets/videos`;
+    const urls = [
+      `https://api.github.com/repos/${repo.owner}/${repo.repo}/contents/assets/videos`,
+      `https://api.github.com/repos/${repo.owner}/${repo.repo}/contents/assets/images`
+    ];
     try {
-      const res = await fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github+json' } });
-      if (!res.ok) return false;
-      const items = await res.json();
-      if (!Array.isArray(items)) return false;
-      const vids = items.filter(it => it.type === 'file' && /\.(mp4|webm|ogg|ogv)$/i.test(it.name));
-      if (!vids.length) return false;
-      // Populate dropdown
+      const [vidRes, imgRes] = await Promise.all(urls.map(u => fetch(u, { headers: { 'Accept': 'application/vnd.github+json' } })));
+      let items = [];
+      if (vidRes && vidRes.ok) items = items.concat(await vidRes.json());
+      if (imgRes && imgRes.ok) items = items.concat(await imgRes.json());
+      items = Array.isArray(items) ? items : [];
+      const files = items.filter(it => it && it.type === 'file' && /\.(mp4|webm|ogg|ogv|jpg|jpeg|png|gif|webp|avif|bmp|svg)$/i.test(it.name));
+      if (!files.length) return false;
       if (controls.bgSelect) {
         controls.bgSelect.innerHTML = '';
-        vids.forEach(it => {
+        files.forEach(it => {
+          const type = kindFromPath(it.name);
           const opt = document.createElement('option');
-          // Use repo-relative path so it serves from the same site origin
-          opt.value = it.path; // e.g., assets/videos/Video1.mp4
-          opt.textContent = it.name.replace(/\.[^.]+$/, '');
+          opt.value = it.path; // repo-relative
+          opt.dataset.type = type;
+          opt.textContent = friendlyLabel(it.name, type === 'video' ? 'Video' : type === 'image' ? 'Image' : 'File');
           controls.bgSelect.appendChild(opt);
         });
       }
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   async function populateBackgrounds() {
@@ -286,7 +341,10 @@ function init() {
         if (!a || !a.src) return;
         const opt = document.createElement('option');
         opt.value = a.src;
-        opt.textContent = a.label || a.src.split('/').pop();
+        const t = a.type || kindFromPath(a.src);
+        opt.dataset.type = t;
+        const name = a.label || a.src.split('/').pop();
+        opt.textContent = friendlyLabel(name, t === 'video' ? 'Video' : t === 'image' ? 'Image' : 'File');
         controls.bgSelect.appendChild(opt);
       });
     }
@@ -368,12 +426,14 @@ function init() {
     if (controls.maskSelect) controls.maskSelect.value = sc.section.dataset.mask || '';
     if (controls.themeSelect) controls.themeSelect.value = sc.section.dataset.theme || 'dark';
     if (controls.bgSelect) {
-      const cur = sc.section.dataset.videoSrc || '';
+      const cur = sc.currentBgSrc || sc.section.dataset.videoSrc || '';
       // If current src isn’t in the list, add a temporary option for visibility
       if (cur && !Array.from(controls.bgSelect.options).some(o => o.value === cur)) {
         const extra = document.createElement('option');
         extra.value = cur;
-        extra.textContent = cur.split('/').pop();
+        const t = kindFromPath(cur);
+        extra.dataset.type = t;
+        extra.textContent = friendlyLabel(cur.split('/').pop(), t === 'video' ? 'Video' : t === 'image' ? 'Image' : 'File');
         controls.bgSelect.appendChild(extra);
       }
       controls.bgSelect.value = cur;
@@ -416,11 +476,14 @@ function init() {
     controls.bgSelect.addEventListener('change', () => {
       const sc = sections[activeIndex];
       if (!sc) return;
-      const val = controls.bgSelect.value;
+      const sel = controls.bgSelect.options[controls.bgSelect.selectedIndex];
+      if (!sel) return;
+      const val = sel.value;
+      const t = (sel.dataset.type || kindFromPath(val));
       if (val) {
-        sc.setVideoSource(val);
+        sc.setBackground(val, t);
         const scrubbing = controls.scrub && controls.scrub.checked;
-        if (!scrubbing && sc.isVisible) {
+        if (t === 'video' && !scrubbing && sc.isVisible) {
           sc.video.play().catch(() => {/* ignore autoplay block */});
         }
       }
