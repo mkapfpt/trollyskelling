@@ -26,6 +26,11 @@ class SectionController {
 
     this.applyOverlayPresentation();
 
+    // Reference to the card wrapper and capture defaults for editing
+    this.cardEl = this.overlay.querySelector(':scope > .card');
+    this.defaultCardHtml = this.cardEl ? this.cardEl.innerHTML : '';
+    this.isEditing = false;
+
     // Create a background <img> for still images (hidden by default)
     this.bgImg = document.createElement('img');
     this.bgImg.className = 'bg-image';
@@ -54,6 +59,9 @@ class SectionController {
       this.video.appendChild(source);
       this.video.load();
     }
+
+    // Apply saved edited content if any (keyed per section title)
+    this.applySavedIfAny();
 
     this.progress = 0; // 0..1 within sticky/pinned span
     this.fullPass = 0; // 0..1 from first entry to full exit
@@ -253,6 +261,9 @@ function init() {
     maskSelect: document.getElementById('maskSelect'),
     themeSelect: document.getElementById('themeSelect'),
     bgSelect: document.getElementById('bgSelect'),
+    editToggle: document.getElementById('editTextToggle'),
+    saveBtn: document.getElementById('saveTextBtn'),
+    restoreBtn: document.getElementById('restoreTextBtn'),
     gradient: document.getElementById('gradientOverlay'),
     // maskSelect/mediaToggle removed
   };
@@ -438,6 +449,7 @@ function init() {
       }
       controls.bgSelect.value = cur;
     }
+    if (controls.editToggle) controls.editToggle.checked = !!sc.isEditing;
   }
 
   const alignSel = document.getElementById('alignSelect');
