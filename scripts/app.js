@@ -126,6 +126,10 @@ class SectionController {
     const base = (this.title || '').trim() || (this.section.id || 'section');
     return `scrolly:text:raw:${base}`;
   }
+  storageRawTitleKey() {
+    const base = (this.title || '').trim() || (this.section.id || 'section');
+    return `scrolly:title:raw:${base}`;
+  }
   getCardHtml() {
     // ensure we always reference the current card element
     if (!this.cardEl) this.cardEl = this.overlay.querySelector(':scope > .card');
@@ -146,6 +150,7 @@ class SectionController {
   restoreDefault() {
     try { localStorage.removeItem(this.storageKey()); } catch (_) {}
     try { localStorage.removeItem(this.storageRawKey()); } catch (_) {}
+    try { localStorage.removeItem(this.storageRawTitleKey()); } catch (_) {}
     // restore from captured default; if missing, do nothing
     if (typeof this.defaultCardHtml === 'string') this.setCardHtml(this.defaultCardHtml);
   }
@@ -301,6 +306,7 @@ function init() {
     themeSelect: document.getElementById('themeSelect'),
     bgSelect: document.getElementById('bgSelect'),
     editToggle: document.getElementById('editTextToggle'),
+    titleInput: document.getElementById('sectionTitleInput'),
     textInput: document.getElementById('sectionTextInput'),
     applyTextBtn: document.getElementById('applyTextBtn'),
     saveTextBtn: document.getElementById('saveTextBtn'),
@@ -493,11 +499,21 @@ function init() {
     // Reflect text editing controls
     if (controls.editToggle) controls.editToggle.checked = !!sc.isEditing;
     // Show/hide editor block
+    const titleCtl = controls.titleInput ? controls.titleInput.closest('.control') : null;
     const textCtl = controls.textInput ? controls.textInput.closest('.control') : null;
     const btnCtl = controls.applyTextBtn ? controls.applyTextBtn.closest('.control') : null;
     const on = !!sc.isEditing;
+    if (titleCtl) titleCtl.style.display = on ? '' : 'none';
     if (textCtl) textCtl.style.display = on ? '' : 'none';
     if (btnCtl) btnCtl.style.display = on ? '' : 'none';
+    if (controls.titleInput) {
+      controls.titleInput.disabled = false;
+      if (on && document.activeElement !== controls.titleInput && !controls.titleInput.value) {
+        let rawTitle = '';
+        try { rawTitle = localStorage.getItem(sc.storageRawTitleKey()) || ''; } catch (_) { rawTitle = ''; }
+        controls.titleInput.value = rawTitle;
+      }
+    }
     if (controls.textInput) {
       // Keep textarea enabled at all times for easier editing
       controls.textInput.disabled = false;
@@ -564,6 +580,9 @@ function init() {
   }
 
   // Text editing control bindings
+  function escapeHtml(s) {
+    return (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
   function textToHtml(input) {
     if (!input) return '';
     // Always treat input as plain text: split on blank lines to paragraphs, single newlines -> <br>
@@ -586,8 +605,11 @@ function init() {
     controls.applyTextBtn.addEventListener('click', () => {
       const sc = sections[activeIndex];
       if (!sc || !controls.textInput) return;
+      const rawTitle = controls.titleInput ? controls.titleInput.value : '';
       const raw = controls.textInput.value;
-      const html = textToHtml(raw);
+      const bodyHtml = textToHtml(raw);
+      const titleHtml = rawTitle ? `<h1>${escapeHtml(rawTitle)}</h1>\n` : '';
+      const html = `${titleHtml}${bodyHtml}`;
       sc.setCardHtml(html);
     });
   }
@@ -595,11 +617,15 @@ function init() {
     controls.saveTextBtn.addEventListener('click', () => {
       const sc = sections[activeIndex];
       if (!sc || !controls.textInput) return;
+      const rawTitle = controls.titleInput ? controls.titleInput.value : '';
       const raw = controls.textInput.value;
-      const html = textToHtml(raw);
+      const bodyHtml = textToHtml(raw);
+      const titleHtml = rawTitle ? `<h1>${escapeHtml(rawTitle)}</h1>\n` : '';
+      const html = `${titleHtml}${bodyHtml}`;
       sc.setCardHtml(html);
       sc.saveEdits(html);
       try { localStorage.setItem(sc.storageRawKey(), raw); } catch (_) {}
+      try { localStorage.setItem(sc.storageRawTitleKey(), rawTitle); } catch (_) {}
     });
   }
   if (controls.restoreTextBtn) {
