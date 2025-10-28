@@ -492,20 +492,25 @@ function init() {
     }
     // Reflect text editing controls
     if (controls.editToggle) controls.editToggle.checked = !!sc.isEditing;
+    // Show/hide editor block
+    const textCtl = controls.textInput ? controls.textInput.closest('.control') : null;
+    const btnCtl = controls.applyTextBtn ? controls.applyTextBtn.closest('.control') : null;
+    const on = !!sc.isEditing;
+    if (textCtl) textCtl.style.display = on ? '' : 'none';
+    if (btnCtl) btnCtl.style.display = on ? '' : 'none';
     if (controls.textInput) {
       // Keep textarea enabled at all times for easier editing
       controls.textInput.disabled = false;
-      // Only update the textarea if it is not focused to avoid clobbering typing
-      if (document.activeElement !== controls.textInput) {
-        // Prefill with saved RAW text if available; otherwise blank
+      // Only update when editor is ON, not focused, and current value empty
+      if (on && document.activeElement !== controls.textInput && !controls.textInput.value) {
         let raw = '';
         try { raw = localStorage.getItem(sc.storageRawKey()) || ''; } catch (_) { raw = ''; }
         controls.textInput.value = raw;
       }
     }
-    if (controls.applyTextBtn) controls.applyTextBtn.disabled = !sc.isEditing;
-    if (controls.saveTextBtn) controls.saveTextBtn.disabled = !sc.isEditing;
-    if (controls.restoreTextBtn) controls.restoreTextBtn.disabled = !sc.isEditing;
+    if (controls.applyTextBtn) controls.applyTextBtn.disabled = !on;
+    if (controls.saveTextBtn) controls.saveTextBtn.disabled = !on;
+    if (controls.restoreTextBtn) controls.restoreTextBtn.disabled = !on;
   }
 
   const alignSel = document.getElementById('alignSelect');
@@ -570,7 +575,10 @@ function init() {
       const sc = sections[activeIndex];
       if (!sc) return;
       sc.enableEditing(controls.editToggle.checked);
-      // Refresh textarea with current content upon toggling
+      // If turning ON and textarea is empty, prefill from saved raw
+      if (controls.editToggle.checked && controls.textInput && !controls.textInput.value) {
+        try { controls.textInput.value = localStorage.getItem(sc.storageRawKey()) || ''; } catch (_) {}
+      }
       reflectActiveInControls();
     });
   }
