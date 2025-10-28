@@ -26,6 +26,11 @@ class SectionController {
 
     this.applyOverlayPresentation();
 
+    // Card reference and default HTML (for text editing features)
+    this.cardEl = this.overlay.querySelector(':scope > .card');
+    this.defaultCardHtml = this.cardEl ? this.cardEl.innerHTML : '';
+    this.isEditing = false;
+
     // Create a background <img> for still images (hidden by default)
     this.bgImg = document.createElement('img');
     this.bgImg.className = 'bg-image';
@@ -54,6 +59,9 @@ class SectionController {
       this.video.appendChild(source);
       this.video.load();
     }
+
+    // Apply saved edited content if any
+    this.applySavedIfAny && this.applySavedIfAny();
 
     this.progress = 0; // 0..1 within sticky/pinned span
     this.fullPass = 0; // 0..1 from first entry to full exit
@@ -107,6 +115,45 @@ class SectionController {
     this.section.dataset.card = String(val);
     // Ensure wrapper exists and just toggle surface
     this.applyOverlayPresentation();
+  }
+
+  // --- Text editing API (used by control panel) ---
+  storageKey() {
+    const base = (this.title || '').trim() || (this.section.id || 'section');
+    return `scrolly:text:${base}`;
+  }
+  storageRawKey() {
+    const base = (this.title || '').trim() || (this.section.id || 'section');
+    return `scrolly:text:raw:${base}`;
+  }
+  getCardHtml() {
+    // ensure we always reference the current card element
+    if (!this.cardEl) this.cardEl = this.overlay.querySelector(':scope > .card');
+    return this.cardEl ? this.cardEl.innerHTML : '';
+  }
+  setCardHtml(html) {
+    if (!this.cardEl) this.cardEl = this.overlay.querySelector(':scope > .card');
+    if (!this.cardEl) return;
+    this.cardEl.innerHTML = html || '';
+  }
+  enableEditing(on) {
+    this.isEditing = !!on;
+  }
+  saveEdits(html) {
+    const content = (typeof html === 'string') ? html : this.getCardHtml();
+    try { localStorage.setItem(this.storageKey(), content); } catch (_) {}
+  }
+  restoreDefault() {
+    try { localStorage.removeItem(this.storageKey()); } catch (_) {}
+    try { localStorage.removeItem(this.storageRawKey()); } catch (_) {}
+    // restore from captured default; if missing, do nothing
+    if (typeof this.defaultCardHtml === 'string') this.setCardHtml(this.defaultCardHtml);
+  }
+  applySavedIfAny() {
+    try {
+      const saved = localStorage.getItem(this.storageKey());
+      if (saved) this.setCardHtml(saved);
+    } catch (_) {}
   }
 
   setBackground(src, type) {
@@ -253,6 +300,11 @@ function init() {
     maskSelect: document.getElementById('maskSelect'),
     themeSelect: document.getElementById('themeSelect'),
     bgSelect: document.getElementById('bgSelect'),
+    editToggle: document.getElementById('editTextToggle'),
+    textInput: document.getElementById('sectionTextInput'),
+    applyTextBtn: document.getElementById('applyTextBtn'),
+    saveTextBtn: document.getElementById('saveTextBtn'),
+    restoreTextBtn: document.getElementById('restoreTextBtn'),
     gradient: document.getElementById('gradientOverlay'),
     // maskSelect/mediaToggle removed
   };
@@ -359,6 +411,9 @@ function init() {
   const sections = Array.from(document.querySelectorAll('section.panel'))
     .map(sec => new SectionController(sec, defaults));
 
+  // Track active section index (closest to viewport center)
+  let activeIndex = 0;
+
   // Populate backgrounds list (async); then reflect active
   populateBackgrounds().then(() => {
     // After population, ensure the control reflects current active section
@@ -398,9 +453,6 @@ function init() {
 
   sections.forEach(sc => io.observe(sc.section));
 
-  // Track active section index (closest to viewport center)
-  let activeIndex = 0;
-
   function pickActiveIndex() {
     let bestIdx = 0;
     let bestDist = Infinity;
@@ -438,6 +490,22 @@ function init() {
       }
       controls.bgSelect.value = cur;
     }
+    // Reflect text editing controls
+    if (controls.editToggle) controls.editToggle.checked = !!sc.isEditing;
+    if (controls.textInput) {
+      // Keep textarea enabled at all times for easier editing
+      controls.textInput.disabled = false;
+      // Only update the textarea if it is not focused to avoid clobbering typing
+      if (document.activeElement !== controls.textInput) {
+        // Prefill with saved RAW text if available; otherwise blank
+        let raw = '';
+        try { raw = localStorage.getItem(sc.storageRawKey()) || ''; } catch (_) { raw = ''; }
+        controls.textInput.value = raw;
+      }
+    }
+    if (controls.applyTextBtn) controls.applyTextBtn.disabled = !sc.isEditing;
+    if (controls.saveTextBtn) controls.saveTextBtn.disabled = !sc.isEditing;
+    if (controls.restoreTextBtn) controls.restoreTextBtn.disabled = !sc.isEditing;
   }
 
   const alignSel = document.getElementById('alignSelect');
@@ -487,6 +555,51 @@ function init() {
           sc.video.play().catch(() => {/* ignore autoplay block */});
         }
       }
+    });
+  }
+
+  // Text editing control bindings
+  function textToHtml(input) {
+    if (!input) return '';
+    // Always treat input as plain text: split on blank lines to paragraphs, single newlines -> <br>
+    const paras = input.split(/\r?\n\s*\r?\n/).map(s => s.trim()).filter(Boolean);
+    return paras.map(p => `<p>${p.replace(/\r?\n/g, '<br>')}</p>`).join('\n');
+  }
+  if (controls.editToggle) {
+    controls.editToggle.addEventListener('change', () => {
+      const sc = sections[activeIndex];
+      if (!sc) return;
+      sc.enableEditing(controls.editToggle.checked);
+      // Refresh textarea with current content upon toggling
+      reflectActiveInControls();
+    });
+  }
+  if (controls.applyTextBtn) {
+    controls.applyTextBtn.addEventListener('click', () => {
+      const sc = sections[activeIndex];
+      if (!sc || !controls.textInput) return;
+      const raw = controls.textInput.value;
+      const html = textToHtml(raw);
+      sc.setCardHtml(html);
+    });
+  }
+  if (controls.saveTextBtn) {
+    controls.saveTextBtn.addEventListener('click', () => {
+      const sc = sections[activeIndex];
+      if (!sc || !controls.textInput) return;
+      const raw = controls.textInput.value;
+      const html = textToHtml(raw);
+      sc.setCardHtml(html);
+      sc.saveEdits(html);
+      try { localStorage.setItem(sc.storageRawKey(), raw); } catch (_) {}
+    });
+  }
+  if (controls.restoreTextBtn) {
+    controls.restoreTextBtn.addEventListener('click', () => {
+      const sc = sections[activeIndex];
+      if (!sc) return;
+      sc.restoreDefault();
+      reflectActiveInControls();
     });
   }
 
