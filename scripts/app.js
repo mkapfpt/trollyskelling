@@ -306,6 +306,7 @@ function init() {
     themeSelect: document.getElementById('themeSelect'),
     bgSelect: document.getElementById('bgSelect'),
     editToggle: document.getElementById('editTextToggle'),
+    addSectionBtn: document.getElementById('addSectionBtn'),
     titleInput: document.getElementById('sectionTitleInput'),
     textInput: document.getElementById('sectionTextInput'),
     applyTextBtn: document.getElementById('applyTextBtn'),
@@ -535,6 +536,71 @@ function init() {
       const sc = sections[activeIndex];
       if (sc) sc.setAlign(alignSel.value);
     });
+  }
+
+  // Create and append a new section at the bottom
+  function createSectionElement(opts) {
+    const main = document.querySelector('main');
+    if (!main) return null;
+    const sec = document.createElement('section');
+    sec.className = 'panel';
+    // datasets
+    sec.dataset.textSpeed = String(opts.textSpeed ?? defaults.textSpeed);
+    sec.dataset.videoSpeed = String(opts.videoSpeed ?? defaults.videoSpeed);
+    sec.dataset.duration = String(opts.duration ?? 10);
+    sec.dataset.title = opts.title || 'New Section';
+    if (opts.theme) sec.dataset.theme = opts.theme;
+    if (opts.mask) sec.dataset.mask = opts.mask;
+    sec.dataset.card = String(opts.card ?? true);
+    sec.dataset.align = opts.align || 'center';
+
+    // structure
+    const sticky = document.createElement('div');
+    sticky.className = 'sticky';
+    const video = document.createElement('video');
+    video.className = 'bg-video';
+    video.setAttribute('playsinline', '');
+    video.setAttribute('muted', '');
+    video.setAttribute('preload', 'metadata');
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    // simple default content
+    overlay.innerHTML = `<div class="card"><h1>${opts.title || 'New Section'}</h1><p>Add your content...</p></div>`;
+    sticky.appendChild(video);
+    sticky.appendChild(overlay);
+    sec.appendChild(sticky);
+    main.appendChild(sec);
+    return sec;
+  }
+
+  function addNewSection() {
+    const idx = sections.length + 1;
+    const alignSelEl = document.getElementById('alignSelect');
+    const currentAlign = alignSelEl ? alignSelEl.value : 'center';
+    const currentTheme = controls.themeSelect ? (controls.themeSelect.value || 'dark') : 'dark';
+    const title = `New Section ${idx}`;
+    const secEl = createSectionElement({ title, theme: currentTheme, align: currentAlign, card: true });
+    if (!secEl) return;
+    // Instantiate controller
+    const sc = new SectionController(secEl, defaults);
+    sections.push(sc);
+    io.observe(secEl);
+    // Apply current background selection if any
+    if (controls.bgSelect && controls.bgSelect.selectedIndex >= 0) {
+      const sel = controls.bgSelect.options[controls.bgSelect.selectedIndex];
+      if (sel && sel.value) {
+        const t = sel.dataset.type || kindFromPath(sel.value);
+        sc.setBackground(sel.value, t);
+      }
+    }
+    // Make it active and scroll into view
+    activeIndex = sections.length - 1;
+    reflectActiveInControls();
+    secEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  if (controls.addSectionBtn) {
+    controls.addSectionBtn.addEventListener('click', addNewSection);
   }
   const cardTog = document.getElementById('cardToggle');
   if (cardTog) {
